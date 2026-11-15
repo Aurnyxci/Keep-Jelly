@@ -153,10 +153,15 @@ local function parseLayerData(node, layerName)
     return data
 end
 
--- Merge horizontal runs of solid tiles into rectangles so Box2D has few bodies
+-- Merge solid tiles into rectangles (horizontal runs, then stacked rows of the
+-- same width) so Box2D has few bodies and walls have no tile-sized ledges
 local function buildCollisionRects(map, layer)
     local rects = {}
+    local open = {} -- rectangles of the previous row, keyed by x and width
+
     for y = 0, map.height - 1 do
+        local runs = {}
+
         local x = 0
         while x < map.width do
             if cleanGid(layer.data[y * map.width + x + 1] or 0) > 0 then
@@ -165,7 +170,7 @@ local function buildCollisionRects(map, layer)
                     and cleanGid(layer.data[y * map.width + x + 1] or 0) > 0 do
                     x = x + 1
                 end
-                rects[#rects + 1] = {
+                runs[#runs + 1] = {
                     x = start * map.tileWidth,
                     y = y * map.tileHeight,
                     w = (x - start) * map.tileWidth,
@@ -175,7 +180,22 @@ local function buildCollisionRects(map, layer)
                 x = x + 1
             end
         end
+
+        local nextOpen = {}
+        for _, run in ipairs(runs) do
+            local key = run.x .. ":" .. run.w
+            local above = open[key]
+            if above then
+                above.h = above.h + run.h
+                nextOpen[key] = above
+            else
+                rects[#rects + 1] = run
+                nextOpen[key] = run
+            end
+        end
+        open = nextOpen
     end
+
     return rects
 end
 

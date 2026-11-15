@@ -13,10 +13,15 @@ end
 
 -- The exit is like a bucket now
 local BUCKET_WALL = 8 -- temp bucket look
+local EXIT_MARGIN = 8
+
+-- fan
+local WIND_SPEED = 320
+local WIND_DOTS = 3
 
 -- We mainly use playerBody:setLinearVelocity() to change player's velocity
 -- It is Love Engine's Box2D function of the linear velocity of a rigidbody object
-local JUMP_VELOCITY = 320
+local JUMP_VELOCITY = math.sqrt(2 * 900 * 67)
 
 -- The jelly works like a spring pad, it only bounces the player when stepped on from above and it can still be pushed left/right
 local ITEM_BOUNCE_SQUASH = 0.5
@@ -63,7 +68,11 @@ local trayFixture
 -- Every rigidbody things is in solids.
 local solids
 local map
-local exit
+local currentLevel
+local exits
+local nextLevel
+local buttons
+local fans
 -- check if can pick up
 local nearbyItem
 
@@ -170,21 +179,143 @@ local function releaseHeldItems()
     end
 end
 
--- Returns true when enough of them have been collected
-local function collectItemsInExit()
-    if not exit then return false end
-    for index = #items, 1, -1 do
-        local itemX, itemY = items[index].body:getPosition()
-        if itemX > exit.x and itemX < exit.x + exit.w
-            and itemY > exit.y and itemY < exit.y + exit.h then
-            items[index].body:destroy()
-            if items[index] == nearbyItem then nearbyItem = nil end
-            table.remove(items, index)
-            exit.collected = exit.collected + 1
+-- A blocker is a static rectangle that only exists while its button is released
+local function newBlockerBody(blocker)
+    local body = love.physics.newBody(world, blocker.x + blocker.w * 0.5, blocker.y + blocker.h * 0.5, "static")
+    love.physics.newFixture(body, love.physics.newRectangleShape(blocker.w, blocker.h)):setFriction(1.5)
+    return body
+end
+
+-- A button is pressed while the player or a jelly overlaps it,
+-- the blocker of that button only exists while it is released
+local function updateButtons()
+    for _, button in ipairs(buttons) do
+        local pressed =
+            player.x < button.x + button.w and player.x + player.w > button.x
+            and player.y < button.y + button.h and player.y + player.h > button.y
+
+        for _, item in ipairs(items) do
+            local itemX, itemY = item.body:getPosition()
+            if itemX + item.w * 0.5 > button.x and itemX - item.w * 0.5 < button.x + button.w
+                and itemY + item.h * 0.5 > button.y and itemY - item.h * 0.5 < button.y + button.h then
+                pressed = true
+                break
+            end
+        end
+
+        if pressed ~= button.pressed then
+            button.pressed = pressed
+            if pressed then
+                button.blocker.body:destroy()
+                button.blocker.body = nil
+            else
+                button.blocker.body = newBlockerBody(button.blocker)
+            end
+        end
+    end
+end
+
+-- The wind stops at the nearest active blocker, so the rectangle gets shorter
+local function windRect(fan)
+    local length = math.max(fan.w, fan.h)
+    for _, button in ipairs(buttons) do
+        local blocker = button.blocker
+        if blocker.body then
+            local distance
+            if fan.dir == "right" then
+                if blocker.y < fan.y + fan.h and blocker.y + blocker.h > fan.y then
+                    distance = blocker.x - fan.x
+                end
+            elseif fan.dir == "left" then
+                if blocker.y < fan.y + fan.h and blocker.y + blocker.h > fan.y then
+                    distance = fan.x + fan.w - (blocker.x + blocker.w)
+                end
+            elseif fan.dir == "down" then
+                if blocker.x < fan.x + fan.w and blocker.x + blocker.w > fan.x then
+                    distance = blocker.y - fan.y
+                end
+            else
+                if blocker.x < fan.x + fan.w and blocker.x + blocker.w > fan.x then
+                    distance = fan.y + fan.h - (blocker.y + blocker.h)
+                end
+            end
+            if distance then
+                length = math.min(length, math.max(distance, 0))
+            end
         end
     end
 
-    return exit.next ~= nil and exit.collected >= exit.required
+    if fan.dir == "right" then
+        return fan.x, fan.y, length, fan.h
+    elseif fan.dir == "left" then
+        return fan.x + fan.w - length, fan.y, length, fan.h
+    elseif fan.dir == "down" then
+        return fan.x, fan.y, fan.w, length
+    else
+        return fan.x, fan.y + fan.h - length, fan.w, length
+    end
+end
+
+-- A fan blows every jelly inside its rectangle, even one resting on the tray
+local function updateFans(dt)
+    for _, fan in ipairs(fans) do
+        local wx, wy, ww, wh = windRect(fan)
+        local reach = (fan.dir == "left" or fan.dir == "right") and ww or wh
+
+        -- the dots travel along the wind over and over again
+        for _, dot in ipairs(fan.dots) do
+            dot.t = (dot.t + WIND_SPEED * dt / math.max(reach, 1)) % 1
+        end
+
+        if reach > 0 then
+            for _, item in ipairs(items) do
+                local itemX, itemY = item.body:getPosition()
+                if itemX > wx and itemX < wx + ww
+                    and itemY > wy and itemY < wy + wh then
+                    -- a jelly on the tray is pushed off it, otherwise the tray keeps holding it
+                    item.held = false
+                    item.flying = true
+                    -- a short grace time, so the tray does not snap it back on the next frame
+                    item.windTimer = 0.3
+
+                    local itemVx, itemVy = item.body:getLinearVelocity()
+                    if fan.dir == "left" then
+                        itemVx = -WIND_SPEED
+                    elseif fan.dir == "right" then
+                        itemVx = WIND_SPEED
+                    elseif fan.dir == "up" then
+                        itemVy = -WIND_SPEED
+                    else
+                        itemVy = WIND_SPEED
+                    end
+                    item.body:setLinearVelocity(itemVx, itemVy)
+                end
+            end
+        end
+    end
+end
+
+-- Returns true when every exit of the level has enough jellies
+local function collectItemsInExit()
+    for index = #items, 1, -1 do
+        local itemX, itemY = items[index].body:getPosition()
+        for _, exit in ipairs(exits) do
+            if itemX > exit.x - EXIT_MARGIN and itemX < exit.x + exit.w + EXIT_MARGIN
+                and itemY > exit.y - EXIT_MARGIN and itemY < exit.y + exit.h + EXIT_MARGIN then
+                items[index].body:destroy()
+                if items[index] == nearbyItem then nearbyItem = nil end
+                table.remove(items, index)
+                exit.collected = exit.collected + 1
+                break
+            end
+        end
+    end
+
+    if not nextLevel then return false end
+    for _, exit in ipairs(exits) do
+        if exit.collected < exit.required then return false end
+    end
+    return true
 end
 
 -- tray has two endpoints they are calculated based on the position and tilt angle of the tray
@@ -224,7 +355,8 @@ local function drawArms(offsetY)
 end
 
 function Game.enter(self, level)
-    map = tmx.load(levelFile(level))
+    currentLevel = levelFile(level)
+    map = tmx.load(currentLevel)
 
     -- Level setup comes from level.lua alone
     local config = Levels[map.path:match("([^/]+)%.tmx$")] or {}
@@ -239,22 +371,21 @@ function Game.enter(self, level)
         }
     end
 
-    exit = nil
-    if config.exit then
-        exit = {
-            x = config.exit.x,
-            y = config.exit.y,
-            w = config.exit.w or 64,
-            h = config.exit.h or 64,
-            -- how many jellies have to be thrown in
-            required = config.exit.required or 1,
+    -- exit condition
+    exits = {}
+    for _, entry in ipairs(config.exits or {}) do
+        exits[#exits + 1] = {
+            x = entry.x,
+            y = entry.y,
+            w = entry.w,
+            h = entry.h,
+            required = entry.required,
             collected = 0,
-            next = config.next and levelFile(config.next),
         }
     end
+    nextLevel = config.next and levelFile(config.next)
 
-    player.x = config.spawn and config.spawn.x or 320
-    player.y = config.spawn and config.spawn.y or 248
+    player.x, player.y = config.spawn.x, config.spawn.y
     player.isOnGround = false
     player.sink = 0
     tray.offset, tray.vy = 0, 0
@@ -286,6 +417,31 @@ function Game.enter(self, level)
     end
 
     for _, rect in ipairs(map.collision) do addSolid(rect) end
+
+    -- Buttons, each one keeps its blocker away while something stands on it
+    buttons = {}
+    for _, entry in ipairs(config.buttons or {}) do
+        local button = {
+            x = entry.x,
+            y = entry.y,
+            w = entry.w,
+            h = entry.h,
+            blocker = entry.blocker,
+            pressed = false,
+        }
+        button.blocker.body = newBlockerBody(button.blocker)
+        buttons[#buttons + 1] = button
+    end
+
+    -- Fans, the dots start at the upwind end of their rectangle
+    fans = {}
+    for _, entry in ipairs(config.fans or {}) do
+        local fan = { x = entry.x, y = entry.y, w = entry.w, h = entry.h, dir = entry.dir, dots = {} }
+        for index = 1, WIND_DOTS do
+            fan.dots[index] = { t = (index - 1) / WIND_DOTS }
+        end
+        fans[#fans + 1] = fan
+    end
 
     -- Tray Physics, collider matches the flat plate sprite
     trayBody = love.physics.newBody(world, tray.x, player.y - tray.gap, "kinematic")
@@ -437,6 +593,8 @@ function Game.update(self, dt)
 
     -- Items soft body -> landings squash the jelly, then the spring wobbles it back
     for _, item in ipairs(items) do
+        item.windTimer = math.max(0, (item.windTimer or 0) - dt)
+
         local onGround = false
         local onTray = false
         for _, contact in ipairs(world:getContacts()) do
@@ -470,7 +628,7 @@ function Game.update(self, dt)
             -- but vertical physics and the spring stay untouched
             item.body:setPosition(tray.x + item.holdOffset, itemY)
             item.body:setLinearVelocity(0, itemVy)
-        elseif onTray and itemVy >= 0 then
+        elseif onTray and itemVy >= 0 and item.windTimer <= 0 then
             -- anything that comes to rest on the tray sticks to it
             item.held = true
             item.flying = false
@@ -609,13 +767,22 @@ function Game.update(self, dt)
         end
     end 
 
+    updateButtons()
+    updateFans(dt)
+
     -- Load Scene when collceting enough jellies
     if collectItemsInExit() then
-        LoadScene(Game, exit.next)
+        LoadScene(Game, nextLevel)
     end
 end
 
 function Game.keypressed(self, key)     
+    -- restart the current level
+    if key == "r" then
+        LoadScene(Game, currentLevel)
+        return
+    end
+
     if key == ctrls[3].keybind then
         if player.isOnGround then
             -- Jump
@@ -653,15 +820,66 @@ function Game.draw(self)
     -- Draw the tile layers of the level
     tmx.draw(map)
 
-    -- The exit and how many jellies are already inside
-    if exit then
+    -- Fans
+    for _, fan in ipairs(fans) do
+        local wx, wy, ww, wh = windRect(fan)
+        local reach = (fan.dir == "left" or fan.dir == "right") and ww or wh
+
+        love.graphics.setColor(1, 1, 1, 0.1)
+        love.graphics.rectangle("fill", wx, wy, ww, wh)
+
+        love.graphics.setColor(1, 1, 1, 0.75)
+        for index, dot in ipairs(fan.dots) do
+            local cross = index / (#fan.dots + 1)
+            local x, y = wx + ww * cross, wy + wh * cross
+            if fan.dir == "left" then
+                x = wx + reach * (1 - dot.t)
+            elseif fan.dir == "right" then
+                x = wx + reach * dot.t
+            elseif fan.dir == "up" then
+                y = wy + reach * (1 - dot.t)
+            else
+                y = wy + reach * dot.t
+            end
+            love.graphics.circle("fill", x, y, 3)
+        end
+
+        -- temp fan body at the upwind end of the wind
+        love.graphics.setColor(0.35, 0.35, 0.45)
+        if fan.dir == "left" then
+            love.graphics.rectangle("fill", fan.x + fan.w - 16, fan.y, 16, fan.h)
+        elseif fan.dir == "right" then
+            love.graphics.rectangle("fill", fan.x, fan.y, 16, fan.h)
+        elseif fan.dir == "up" then
+            love.graphics.rectangle("fill", fan.x, fan.y + fan.h - 16, fan.w, 16)
+        else
+            love.graphics.rectangle("fill", fan.x, fan.y, fan.w, 16)
+        end
+    end
+
+    -- Buttons
+    for _, button in ipairs(buttons) do
+        love.graphics.setColor(0.2, 0.95, 0.4, button.pressed and 0.4 or 1)
+        love.graphics.rectangle("fill", button.x, button.y, button.w, button.h)
+
+        if not button.pressed then
+            local blocker = button.blocker
+            love.graphics.setColor(0.15, 0.75, 0.3, 0.75)
+            love.graphics.rectangle("fill", blocker.x, blocker.y, blocker.w, blocker.h)
+        end
+    end
+
+    -- current number of jellies in the exit
+    for _, exit in ipairs(exits) do
         love.graphics.setColor(0.45, 0.30, 0.18)
         love.graphics.rectangle("fill", exit.x, exit.y, BUCKET_WALL, exit.h)
         love.graphics.rectangle("fill", exit.x + exit.w - BUCKET_WALL, exit.y, BUCKET_WALL, exit.h)
         love.graphics.rectangle("fill", exit.x, exit.y + exit.h - BUCKET_WALL, exit.w, BUCKET_WALL)
 
         love.graphics.setColor(1, 1, 1)
-        love.graphics.print(exit.collected .. "/" .. exit.required, exit.x, exit.y - 26, 0, 2, 2)
+        local text = exit.collected .. "/" .. exit.required
+        local textWidth = love.graphics.getFont():getWidth(text) * 2
+        love.graphics.print(text, exit.x + (exit.w - textWidth) * 0.5, exit.y - 64, 0, 2, 2)
     end
 
     -- Draw Tray (behind hands)
