@@ -1,7 +1,7 @@
 # Keep Jelly
 Make game for LÖVE Jam 2026-B
 
-The jelly balance game
+A 2D-Puzzle-Platformer game with some jelly physics effects.
 
 ---
 
