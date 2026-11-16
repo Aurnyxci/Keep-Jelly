@@ -28,7 +28,7 @@
    <image source="../../assets/sprites/clouds/cloud_8.png" width="160" height="96"/>
   </tile>
  </tileset>
- <objectgroup id="5" name="Object Layer 1">
+ <objectgroup id="5" name="Clouds">
   <object id="1" gid="3" x="135" y="216" width="160" height="96"/>
   <object id="9" gid="6" x="943" y="457" width="160" height="96"/>
   <object id="10" gid="8" x="507" y="275" width="160" height="96"/>
