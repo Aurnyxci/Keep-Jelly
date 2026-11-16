@@ -8,7 +8,7 @@ function menu:enter()
         80
     )
 
-    self.titleBackground = love.graphics.newImage("/assets/backgrounds/main_menu_placeholderbg.png") --short function for big image path
+    self.titleBackground = love.graphics.newImage("/assets/backgrounds/menu_background.png") --short function for big image path
 
     local setButtonType = buttonUnpressed
 
