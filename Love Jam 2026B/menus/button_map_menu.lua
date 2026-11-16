@@ -86,8 +86,9 @@ function options:mousepressed(x, y, button) --checks if the mouse is pressed on 
         and y < b.y + b.h then
 
             if b.text == "Exit" then
-                LoadScene(require("menus/options_menu"))
+                buttonSound:play()
                 print("returning to options menu")
+                LoadScene(require("menus/options_menu"))
             end
         end
     end

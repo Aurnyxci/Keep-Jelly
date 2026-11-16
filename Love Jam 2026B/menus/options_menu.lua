@@ -109,9 +109,11 @@ function options:mousepressed(x, y, button) --checks if the mouse is pressed on 
         and y < b.y + b.h then
 
             if b.text == "Exit" then
+                buttonSound:play()
                 LoadScene(require("menus/main_menu"))
                 print("returning to main menu")
             elseif b.text == "Button Map" then
+                buttonSound:play()
                 LoadScene(require("menus/button_map_menu"))
                 print("going to button map menu")
             elseif b.text == "Sound: " then

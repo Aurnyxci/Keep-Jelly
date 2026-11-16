@@ -9,6 +9,18 @@ function LoadScene(scene,...)
 
 end
 
+function playSong()
+    local songs = {
+        "assets/music/jellyRunMainTheme.mp3",
+        "assets/music/jellyRunAltTheme.mp3"
+    }
+
+    local currentSong = songs[love.math.random(#songs)]
+
+    music = love.audio.newSource(currentSong, "stream")
+    music:play()
+end
+
 function love.load()
     json = require("libs.json") --loads json library
     anim8 = require("libs.anim8")
@@ -26,8 +38,12 @@ function love.load()
     24
     )
 
+    buttonSound = love.audio.newSource("assets/sounds/buttonClick.mp3", "stream")
+
     local icon = love.image.newImageData("assets/icons/icon.png")
     love.window.setIcon(icon)
+
+    playSong()
 
     love.graphics.setDefaultFilter("nearest","nearest")
     particles = require("particles")
@@ -38,6 +54,11 @@ end
 function love.update(dt)
     particles:update(dt)
     love.mouse.setVisible(false)
+
+    if not music:isPlaying() then
+        playSong()
+    end
+
     if currentScene.update then currentScene.update(currentScene, dt) end
 
 end

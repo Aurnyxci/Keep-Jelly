@@ -104,14 +104,17 @@ function menu:mousepressed(x, y, button) --checks if the mouse is pressed on the
         and y < b.y + b.h then
 
             if b.text == "Start Game" then --checks if the button starts the game so it starts
-                LoadScene(require("game"))
+                buttonSound:play()
                 print("starting game")
+                LoadScene(require("game"))
 
             elseif b.text == "Options" then
                 print("opening settings")
+                buttonSound:play()
                 LoadScene(require("menus/options_menu"))
 
             elseif b.text == "Quit" then --checks if the button is quit so then it quits
+                buttonSound:play()
                 print("quitting")
                 love.event.quit()
             end
