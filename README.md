@@ -1,4 +1,4 @@
-# LOVE-Jam-2026-B
+# Keep Jelly
 Make game for LÖVE Jam 2026-B
 
 The jelly balance game
