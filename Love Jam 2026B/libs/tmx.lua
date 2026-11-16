@@ -7,10 +7,6 @@ local TMX = {}
 
 local imageCache = {}
 
--- ---------------------------------------------------------------------------
--- Tiny XML parser (enough for TMX files)
--- ---------------------------------------------------------------------------
-
 local function decodeEntities(s)
     s = s:gsub("&quot;", '"'):gsub("&apos;", "'")
     s = s:gsub("&lt;", "<"):gsub("&gt;", ">")
@@ -75,10 +71,6 @@ local function parseXML(xml)
     return root.children[1]
 end
 
--- ---------------------------------------------------------------------------
--- Helpers
--- ---------------------------------------------------------------------------
-
 local function joinPath(dir, file)
     if file:match("^[/\\]") or file:match("^%a:") then return file end
     local path = dir == "" and file or dir .. "/" .. file
@@ -108,10 +100,6 @@ local function readXML(path)
     assert(root, "TMX: empty file " .. path)
     return root
 end
-
--- ---------------------------------------------------------------------------
--- Loading
--- ---------------------------------------------------------------------------
 
 local function loadTileset(node, firstgid, dir)
     local tileset = {
@@ -153,8 +141,6 @@ local function parseLayerData(node, layerName)
     return data
 end
 
--- Merge solid tiles into rectangles (horizontal runs, then stacked rows of the
--- same width) so Box2D has few bodies and walls have no tile-sized ledges
 local function buildCollisionRects(map, layer)
     local rects = {}
     local open = {} -- rectangles of the previous row, keyed by x and width
@@ -286,7 +272,6 @@ function TMX.load(path)
             buildBatches(map, layer)
             map.layers[#map.layers + 1] = layer
 
-            -- the layer named "collision" holds the solid tiles
             if layer.name:lower() == "collision" then
                 local rects = buildCollisionRects(map, layer)
                 for _, rect in ipairs(rects) do

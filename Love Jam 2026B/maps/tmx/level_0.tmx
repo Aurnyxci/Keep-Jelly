@@ -1,46 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="40" height="23" tilewidth="32" tileheight="32" infinite="0" nextlayerid="6" nextobjectid="23">
+<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="40" height="23" tilewidth="32" tileheight="32" infinite="0" nextlayerid="2" nextobjectid="1">
  <tileset firstgid="1" source="TempTiles.tsx"/>
- <tileset firstgid="3" name="Clouds" tilewidth="160" tileheight="96" tilecount="8" columns="0">
-  <grid orientation="orthogonal" width="1" height="1"/>
-  <tile id="0">
-   <image source="../../assets/sprites/clouds/cloud_1.png" width="160" height="96"/>
-  </tile>
-  <tile id="1">
-   <image source="../../assets/sprites/clouds/cloud_2.png" width="160" height="96"/>
-  </tile>
-  <tile id="2">
-   <image source="../../assets/sprites/clouds/cloud_3.png" width="160" height="96"/>
-  </tile>
-  <tile id="3">
-   <image source="../../assets/sprites/clouds/cloud_4.png" width="160" height="96"/>
-  </tile>
-  <tile id="4">
-   <image source="../../assets/sprites/clouds/cloud_5.png" width="160" height="96"/>
-  </tile>
-  <tile id="5">
-   <image source="../../assets/sprites/clouds/cloud_6.png" width="160" height="96"/>
-  </tile>
-  <tile id="6">
-   <image source="../../assets/sprites/clouds/cloud_7.png" width="160" height="96"/>
-  </tile>
-  <tile id="7">
-   <image source="../../assets/sprites/clouds/cloud_8.png" width="160" height="96"/>
-  </tile>
- </tileset>
- <objectgroup id="5" name="Clouds">
-  <object id="1" gid="3" x="135" y="216" width="160" height="96"/>
-  <object id="9" gid="6" x="943" y="457" width="160" height="96"/>
-  <object id="10" gid="8" x="507" y="275" width="160" height="96"/>
-  <object id="11" gid="9" x="484" y="617" width="160" height="96"/>
-  <object id="12" gid="10" x="1004" y="229" width="160" height="96"/>
-  <object id="13" gid="7" x="71" y="482" width="160" height="96"/>
-  <object id="14" gid="5" x="655" y="426" width="160" height="96"/>
-  <object id="15" gid="4" x="1097" y="668" width="160" height="96"/>
-  <object id="16" gid="5" x="-23" y="308" width="160" height="96"/>
-  <object id="17" gid="2147483656" x="723" y="126" width="160" height="96"/>
-  <object id="21" gid="2147483656" x="9" y="607" width="160" height="96"/>
- </objectgroup>
  <layer id="1" name="collision" width="40" height="23">
   <data encoding="csv">
 2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1,

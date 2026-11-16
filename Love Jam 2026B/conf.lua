@@ -1,5 +1,6 @@
 function love.conf(t)
-    t.title = "Jelly Run"
+    t.title = "Keep Jelly"
+    t.identity = "keep_jelly"
     t.version = "11.5"
     t.console = false
     t.window.width = 1280

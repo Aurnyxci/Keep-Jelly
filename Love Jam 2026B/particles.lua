@@ -15,21 +15,6 @@ local function yellowJellySplat1()
     )
 end
 
-local function menuMouseParticles()
-    local mmpIMAGE = love.graphics.newImage("assets/sprites/particles/menuMouseParticles.png")
-    mmp = love.graphics.newParticleSystem(mmpIMAGE)
-
-    mmp:setParticleLifetime(0.5, 1.5)
-    mmp:setEmissionRate(100)
-    mmp:setSizes(1.5, 0)
-    mmp:setLinearAcceleration(-50, 50, -50, 50)
-    mmp:setSpeed(-50, 75)
-    mmp:setColors(
-        1, 1, 1, 1,   -- white
-        0, 0, 0, 0    -- black, fade out
-    )
-end
-
 local function fanWindUp()
     local fwuIMAGE = love.graphics.newImage("assets/sprites/particles/fanWindUp.png")
     local fwuAnim8Prep = anim8.newGrid(4, 4, fwuIMAGE:getWidth(), fwuIMAGE:getHeight())
@@ -46,33 +31,14 @@ local function fanWindUp()
 
 end
 
-local function menuTitleParticles()
-    local mtpIMAGE = love.graphics.newImage("assets/sprites/particles/menuTitleParticles.png")
-    mtp = love.graphics.newParticleSystem(mtpIMAGE)
-
-    mtp:setParticleLifetime(0.5, 1.5)
-    mtp:setEmissionRate(200)
-    mtp:setSizes(1.5, 0)
-    mtp:setLinearAcceleration(50, 50, 50, 50)
-    mtp:setSpeed(-400, 400)
-    mtp:setColors(
-        1, 1, 1, 1,
-        0.3, 0.3, 0.3, 0
-    )
-end
-
 function particles:enter()
     yellowJellySplat1()
-    menuMouseParticles()
     fanWindUp()
-    menuTitleParticles()
 end
 
 function particles:update(dt)
     yjs1:update(dt)
-    mmp:update(dt)
     fwu:update(dt)
-    mtp:update(dt)
 end
 
 

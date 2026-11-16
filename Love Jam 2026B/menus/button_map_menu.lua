@@ -1,13 +1,14 @@
-local options = {}
+local menu = {}
 
-function options:enter()
-    self.titleBackground = love.graphics.newImage("/assets/backgrounds/main_menu_placeholderbg.png") --short function for big image path
-
-    local setButtonType = buttonUnpressed
+function menu:enter()
+    self.titleBackground = love.graphics.newImage("/assets/backgrounds/main_menu_placeholderbg.png")
+    self.titleFont = love.graphics.newFont("assets/fonts/Exile-Regular.ttf", 80)
 
     self.buttons = {
         {
-            text = "Exit",
+            id = "exit",
+            text = "Back",
+            tip = "Return to options",
             x = (screenWidth / 2) - 100,
             y = 650,
             w = 200,
@@ -17,81 +18,71 @@ function options:enter()
 end
 
 local function isMouseOver(button)
-    mx, my = love.mouse.getPosition() --finds the mouse position
-
-    return mx > button.x  --checks if mouse is inside the button
-        and mx < button.x + button.w
-        and my > button.y
-        and my < button.y + button.h
+    local mx, my = love.mouse.getPosition()
+    return mx > button.x and mx < button.x + button.w
+        and my > button.y and my < button.y + button.h
 end
 
-function options:draw()
+function menu:draw()
     local bgw = love.graphics.getWidth() / self.titleBackground:getWidth()
     local bgh = love.graphics.getHeight() / self.titleBackground:getHeight()
+    love.graphics.draw(self.titleBackground, 0, 0, 0, bgw, bgh)
 
-    love.graphics.draw(self.titleBackground, 0, 0, 0, bgw, bgh) --draw background
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.setFont(self.titleFont)
+    love.graphics.printf("Controls", 0, 40, screenWidth, "center")
 
-    for _, button in ipairs(self.buttons) do --iterates through the data table
+    local hoverTip = nil
 
-        if isMouseOver(button) then --check if mouse is inside button and change button color
-            setButtonType = buttonPressed
-        else
-            setButtonType = buttonUnpressed
-        end
+    for _, button in ipairs(self.buttons) do
+        local hover = isMouseOver(button)
+        local image = hover and buttonPressed or buttonUnpressed
 
-        love.graphics.draw(
-            setButtonType,
-            button.x,
-            button.y
-        )
-
+        MenuButtonScale(button, hover)
+        BeginMenuButton(button)
+        love.graphics.draw(image, 0, 0)
         love.graphics.setColor(1, 1, 1)
         love.graphics.setFont(mainFont)
-        love.graphics.printf(
-            button.text,
-            button.x,
-            button.y + 10,
-            button.w,
-            "center"
-        )
+        love.graphics.printf(button.text, 0, 10, button.w, "center")
+        EndMenuButton()
+
+        if hover and button.tip then
+            hoverTip = button.tip
+        end
     end
 
-    local i = 1
+    local listW = 520
+    local listX = (screenWidth - listW) / 2
+    local lineH = 46
+    local startY = 150
 
-    for _, c in ipairs(ctrls) do
-        love.graphics.setColor(0.4, 0.4, 0.4)
-        love.graphics.printf(
-            ctrls[i].action .. ": " .. ctrls[i].keybind,
-            (screenWidth / 2) - ((screenWidth / 2) / 2),
-            (i * 50) + 100,
-            (screenWidth / 2),
-            "center"
-        )
-        i = i + 1
-    end
     love.graphics.setColor(1, 1, 1)
-    love.graphics.draw(mmp, mx, my)
+    love.graphics.setFont(mainFont)
 
+    for i, c in ipairs(ctrls) do
+        local y = startY + (i - 1) * lineH
+        love.graphics.print(c.action, listX, y)
+        love.graphics.printf(string.upper(c.keybind), listX, y, listW, "right")
+    end
+
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.setFont(mainFont)
+    love.graphics.printf(hoverTip or "", 0, 680, screenWidth, "center")
 end
 
-function options:mousepressed(x, y, button) --checks if the mouse is pressed on the button and what to do afterwards
-    if button ~=1 then
-        return
-    end
+function menu:mousepressed(x, y, button)
+    if button ~= 1 then return end
 
     for _, b in ipairs(self.buttons) do
-        if x > b.x
-        and x < b.x + b.w
-        and y > b.y
-        and y < b.y + b.h then
+        if x > b.x and x < b.x + b.w
+            and y > b.y and y < b.y + b.h then
 
-            if b.text == "Exit" then
-                buttonSound:play()
-                print("returning to options menu")
+            if b.id == "exit" then
                 LoadScene(require("menus/options_menu"))
             end
+            return
         end
     end
 end
 
-return options
+return menu

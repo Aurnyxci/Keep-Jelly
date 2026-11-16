@@ -20,11 +20,11 @@
         "keybind" : "escape"
     },
     {
-        "action" : "Close Game",
-        "keybind" : "f5"
+        "action" : "Throw Item",
+        "keybind" : "left mouse"
     },
     {
-        "action" : "Edit Keybinds",
-        "keybind" : "q"
+        "action" : "Reset Level",
+        "keybind" : "r"
     }
 ]

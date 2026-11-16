@@ -1,76 +1,88 @@
 local currentScene
 
+local Audio = require("audio")
+
 function LoadScene(scene,...)
     currentScene = scene
     local inGame = currentScene == require("game")
     love.mouse.setVisible(not inGame)
     love.mouse.setGrabbed(inGame)
+    -- leaving a level must not leave the walk loop running
+    Audio.stopMovement()
     if currentScene.enter then currentScene.enter(currentScene,...) end
 
 end
 
-function playSong()
-    local songs = {
-        "assets/music/jellyRunMainTheme.mp3",
-        "assets/music/jellyRunAltTheme.mp3"
-    }
+-- Menu buttons slowly swell up while the pointer is over them,
+-- and take a little longer (~0.2s) to settle back down
+local HOVER_SCALE = 1.08
+local GROW_SPEED = 8
+local SHRINK_SPEED = 5
 
-    local currentSong = songs[love.math.random(#songs)]
+function MenuButtonScale(button, hovered)
+    button.scale = button.scale or 1
+    local target = hovered and HOVER_SCALE or 1
+    local speed = hovered and GROW_SPEED or SHRINK_SPEED
+    button.scale = button.scale + (target - button.scale) * math.min(love.timer.getDelta() * speed, 1)
+end
 
-    music = love.audio.newSource(currentSong, "stream")
-    music:play()
+function BeginMenuButton(button)
+    love.graphics.push()
+    love.graphics.translate(button.x + button.w / 2, button.y + button.h / 2)
+    love.graphics.scale(button.scale or 1)
+    love.graphics.translate(-button.w / 2, -button.h / 2)
+end
+
+function EndMenuButton()
+    love.graphics.pop()
 end
 
 function love.load()
-    json = require("libs.json") --loads json library
+    json = require("libs.json")
     anim8 = require("libs.anim8")
 
-    ctrls = json.decode(love.filesystem.read("controls.json")) --loads ctrls json
+    ctrls = json.decode(love.filesystem.read("controls.json"))
 
-    screenWidth = love.graphics.getWidth() --finds the height and width of the screen
+    screenWidth = love.graphics.getWidth()
     screenHeight = love.graphics.getHeight()
 
     buttonPressed = love.graphics.newImage("assets/sprites/buttons/buttonPressed.png")
     buttonUnpressed = love.graphics.newImage("assets/sprites/buttons/buttonUnpressed.png")
 
-    mainFont = love.graphics.newFont( --main font load
-    "assets/fonts/Tiny5Duo-VariableFont_BLED,JITT,ROND,wdth,wght.ttf",
+    mainFont = love.graphics.newFont(
+    "assets/fonts/Exile-Regular.ttf",
     24
     )
-
-    buttonSound = love.audio.newSource("assets/sounds/buttonClick.mp3", "stream")
 
     local icon = love.image.newImageData("assets/icons/icon.png")
     love.window.setIcon(icon)
 
-    playSong()
-
     love.graphics.setDefaultFilter("nearest","nearest")
     particles = require("particles")
-    LoadScene(require("menus/main_menu")) --loads the main menu
+    softCursor = require("cursor")
+    softCursor:enter()
+    require("save").load()
+    Audio.load()
+    LoadScene(require("menus/main_menu"))
 
 end
 
 function love.update(dt)
     particles:update(dt)
+    softCursor:update(dt)
     love.mouse.setVisible(false)
-
-    if not music:isPlaying() then
-        playSong()
-    end
-
     if currentScene.update then currentScene.update(currentScene, dt) end
 
 end
 
 function love.draw()
     if currentScene.draw then currentScene.draw(currentScene) end
+    if not love.mouse.isGrabbed() then softCursor:draw() end
 
 end
 
 function love.keypressed(key)
     if key == ctrls[5].keybind then LoadScene(require("menus/main_menu")) return end
-    if key == ctrls[6].keybind then love.event.quit("restart") return end
     if currentScene.keypressed then currentScene.keypressed(currentScene,key) end
 
 end
@@ -78,5 +90,11 @@ end
 function love.mousepressed(x, y, button)
     if currentScene.mousepressed then
         currentScene:mousepressed(x, y, button)
+    end
+end
+
+function love.mousereleased(x, y, button)
+    if currentScene.mousereleased then
+        currentScene:mousereleased(x, y, button)
     end
 end
